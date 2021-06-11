@@ -33,8 +33,12 @@ from ctypes import *
 import datetime
 import platform
 import subprocess
-import win32pipe
-import win32file
+
+sys = platform.system()
+if sys == "Windows":
+    import win32pipe
+    import win32file
+
 from frame_deal import FreamDeal
 
 class FrameOnline(FreamDeal):
@@ -64,10 +68,14 @@ class FrameOnline(FreamDeal):
                 # connect to pipe
                 win32pipe.ConnectNamedPipe(self.pipe, None)
             else:
-                wireshark_cmd = ['wireshark', '-k', '-i', './sharkfin', '&']
+                wireshark_cmd = ['wireshark', '-k', '-i', '/tmp/sharkfin']
+                proc = subprocess.Popen(wireshark_cmd)
 
-                name = "wireshark_pipe"
-                os.mkfifo(name)
+                name = "/tmp/sharkfin"
+                try:
+                    os.mkfifo(name)
+                except FileExistsError:
+                    pass
                 self.out = open(name, 'wb')
                 FreamDeal.__init__(self, self.out)
             # go to http://www.tcpdump.org/linktypes.html for more information 
@@ -84,9 +92,6 @@ class FrameOnline(FreamDeal):
                                  65535,        # max length of captured packets, in octets
                                  dlt)          # data link type (DLT) - IEEE 802.15.4
             self.write(header)
-
-        except FileExistsError:
-            pass
         except:
             raise
 
@@ -107,7 +112,6 @@ class FrameOnline(FreamDeal):
                 self.out.flush()
         except Exception as e:
             print(e)
-            pass    # pass the Exception so we can save log when we stop capturing in wireshark.
 
 
     def frame_deal(self, datas):
