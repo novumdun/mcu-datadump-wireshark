@@ -34,6 +34,7 @@
 #include "misc_evt.h"
 #include "wireshark_log.h"
 
+// WSK_LOG_BUF_NUM should be 1<<n
 #define WSK_LOG_BUF_NUM 0x20
 #define WSK_LOG_BUF_NUM_MASK WSK_LOG_BUF_NUM - 1
 struct wsk_log_stru
@@ -105,16 +106,6 @@ int wsk_hexdump(wsk_dump_dir_t dir, func_gen_data_t func, void *paras)
 
     os_tick_t time = (1000 / OS_TICK_PER_SECOND) * os_tick_get();
 
-    os_base_t level = os_irq_lock();
-    int empty = WSK_LOG_FIFO_EMPTY();
-
-    int buf_w = s_wsk_log_stru.buf_w;
-    s_wsk_log_stru.buf_w++;
-    s_wsk_log_stru.buf_w &= WSK_LOG_BUF_NUM_MASK;
-
-    s_wsk_log_stru.overflow = s_wsk_log_stru.overflow || WSK_LOG_FIFO_EMPTY();
-    os_irq_unlock(level);
-
     wsk_ret_t rets;
     func(paras, &rets);
 
@@ -132,8 +123,18 @@ int wsk_hexdump(wsk_dump_dir_t dir, func_gen_data_t func, void *paras)
     buf[pos] = dir;
     buf[tol_len - 1] = 0x55;
 
+    os_base_t level = os_irq_lock();
+    int empty = WSK_LOG_FIFO_EMPTY();
+
+    int buf_w = s_wsk_log_stru.buf_w;
+    s_wsk_log_stru.buf_w++;
+    s_wsk_log_stru.buf_w &= WSK_LOG_BUF_NUM_MASK;
+
+    s_wsk_log_stru.overflow = s_wsk_log_stru.overflow || WSK_LOG_FIFO_EMPTY();
+
     s_wsk_log_stru.buf_p[buf_w] = buf;
     s_wsk_log_stru.buf_len[buf_w] = tol_len;
+    os_irq_unlock(level);
 
     if (empty)
     {
