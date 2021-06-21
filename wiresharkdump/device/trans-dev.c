@@ -3,7 +3,7 @@
 #include <os_assert.h>
 #include <serial/serial.h>
 #include "misc_evt.h"
-#include "wireshark_log.h"
+#include "wiresharkdump.h"
 
 static os_err_t rx_done(os_device_t *dev, struct os_device_cb_info *info)
 {

@@ -199,18 +199,6 @@ if __name__ == '__main__':
         help='set baud rate, default: %(default)s',
         default=9600)
 
-    # parser.add_argument(
-    #     '-q', '--quiet',
-    #     action='store_true',
-    #     help='suppress non error messages',
-    #     default=False)
-
-    # parser.add_argument(
-    #     '--develop',
-    #     action='store_true',
-    #     help='Development mode, prints Python internals on errors',
-    #     default=False)
-
     group = parser.add_argument_group('serial port')
 
     group.add_argument(
@@ -245,19 +233,6 @@ if __name__ == '__main__':
         action='store_true',
         help='enable software flow control (default off)',
         default=False)
-
-    # group.add_argument(
-    #     '--rts',
-    #     type=int,
-    #     help='set initial RTS line state (possible values: 0, 1)',
-    #     default=None)
-
-    # group.add_argument(
-    #     '--dtr',
-    #     type=int,
-    #     help='set initial DTR line state (possible values: 0, 1)',
-    #     default=None)
-
         
     group = parser.add_argument_group('frame deal')
 
@@ -265,14 +240,14 @@ if __name__ == '__main__':
         "--deal",
         choices=['LOG', 'ONLINE'],
         type=lambda c: c.upper(),
-        help="set frame deal, one of {LOG ONLINE}, default: ONLINE",
+        help="set way to deal frame, one of {LOG ONLINE}, default: ONLINE",
         default='ONLINE')
 
     group.add_argument(
         "--type",
         choices=['ETHERNET', 'BLUETOOTH_HCI_H4_WITH_PHDR'],
         type=lambda c: c.upper(),
-        help="set frame deal, one of {ETHERNET BLUETOOTH_HCI_H4_WITH_PHDR}, default: ETHERNET",
+        help="set frame type, one of {ETHERNET BLUETOOTH_HCI_H4_WITH_PHDR}, default: ETHERNET",
         default='ETHERNET')
 
     args = parser.parse_args()
@@ -285,17 +260,6 @@ if __name__ == '__main__':
     ser.stopbits = args.stopbits
     ser.rtscts = args.rtscts
     ser.xonxoff = args.xonxoff
-
-    # if args.rts is not None:
-    #     ser.rts = args.rts
-
-    # if args.dtr is not None:
-    #     ser.dtr = args.dtr
-
-    # if not args.quiet:
-    #     sys.stderr.write(
-    #         '--- Serial on {p.name}  {p.baudrate},{p.bytesize},{p.parity},{p.stopbits} ---\n'
-    #         '--- type Ctrl-C / BREAK to quit\n'.format(p=ser))
 
     try:
         ser.open()

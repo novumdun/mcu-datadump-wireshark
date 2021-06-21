@@ -11,7 +11,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  *
- * @file        wireshark_log.c
+ * @file        wiresharkdump.c
  *
  * @brief       Dump data to pc and save them to a file that wireshark can read
  *
@@ -32,7 +32,7 @@
 #include <string.h>
 #include <serial/serial.h>
 #include "misc_evt.h"
-#include "wireshark_log.h"
+#include "wiresharkdump.h"
 
 // WSK_LOG_BUF_NUM should be 1<<n
 #define WSK_LOG_BUF_NUM 0x20
@@ -182,7 +182,7 @@ void wsk_frame_tx_done(void)
     }
 }
 
-int wsk_log_sta_check(void)
+int wsk_dump_sta_check(void)
 {
     if (s_wsk_log_stru.overflow)
     {
@@ -199,7 +199,7 @@ static int wsk_evt_deal(os_uint32_t arg)
     return 0;
 }
 
-void wsk_log_init(os_device_t *dev)
+void wsk_dump_init(os_device_t *dev)
 {
     s_wsk_log_stru.dev = dev;
 }
