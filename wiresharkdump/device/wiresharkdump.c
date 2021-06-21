@@ -23,6 +23,9 @@
  ***********************************************************************************************************************
  */
 #include <drivers/uart.h>
+#include <kernel.h>
+#include <stdlib.h>
+#include <string.h>
 #include "misc_evt.h"
 #include "wiresharkdump.h"
 
@@ -31,7 +34,7 @@
 #define WSK_LOG_BUF_NUM_MASK WSK_LOG_BUF_NUM - 1
 struct wsk_log_stru
 {
-    os_device_t *dev;
+    struct device *dev;
     unsigned char *(buf_p[WSK_LOG_BUF_NUM]);
     unsigned short buf_len[WSK_LOG_BUF_NUM];
     unsigned short buf_tx_len;
@@ -44,7 +47,7 @@ static struct wsk_log_stru s_wsk_log_stru;
 #define WSK_LOG_FIFO_FULL() (WSK_LOG_BUF_NUM_MASK == ((s_wsk_log_stru.buf_w + WSK_LOG_BUF_NUM - s_wsk_log_stru.buf_r) & WSK_LOG_BUF_NUM_MASK))
 #define WSK_LOG_FIFO_EMPTY() (s_wsk_log_stru.buf_w == s_wsk_log_stru.buf_r)
 
-static int wsk_evt_deal(os_uint32_t arg);
+static int wsk_evt_deal(uint32_t arg);
 
 int wsk_bt_hci_hexdump(void *paras_p, wsk_ret_t *rets)
 {
@@ -54,14 +57,14 @@ int wsk_bt_hci_hexdump(void *paras_p, wsk_ret_t *rets)
     char *pkt = paras->pkt;
     int len = paras->len;
 
-    unsigned int tol_len = 5 + sizeof(os_tick_t) + (len + 1);
+    unsigned int tol_len = 5 + sizeof(k_ticks_t) + (len + 1);
     unsigned char *buf = malloc(tol_len);
-    zassert_true(buf != OS_NULL);
+    zassert_true(buf != NULL);
 
-    unsigned int pos = 4 + sizeof(os_tick_t);
+    unsigned int pos = 4 + sizeof(k_ticks_t);
     buf[pos] = type & 0x0F;
 
-    memcpy(&buf[5 + sizeof(os_tick_t)], pkt, len);
+    memcpy(&buf[5 + sizeof(k_ticks_t)], pkt, len);
 
     rets->buf = buf;
     rets->tol_len = tol_len;
@@ -76,11 +79,11 @@ int wsk_eth_hexdump(void *paras_p, wsk_ret_t *rets)
     char *pkt = paras->pkt;
     int len = paras->len;
 
-    unsigned int tol_len = 5 + sizeof(os_tick_t) + len;
+    unsigned int tol_len = 5 + sizeof(k_ticks_t) + len;
     unsigned char *buf = malloc(tol_len);
-    zassert_true(buf != OS_NULL);
+    zassert_true(buf != NULL);
 
-    memcpy(&buf[4 + sizeof(os_tick_t)], pkt, len);
+    memcpy(&buf[4 + sizeof(k_ticks_t)], pkt, len);
 
     rets->buf = buf;
     rets->tol_len = tol_len;
@@ -96,7 +99,7 @@ int wsk_hexdump(wsk_dump_dir_t dir, func_gen_data_t func, void *paras)
         return 0;
     }
 
-    os_tick_t time = (1000 / sys_clock_hw_cycles_per_sec()) * k_cycle_get_32();
+    k_ticks_t time = (1000 / sys_clock_hw_cycles_per_sec()) * sys_clock_tick_get();
 
     wsk_ret_t rets;
     func(paras, &rets);
@@ -132,7 +135,7 @@ int wsk_hexdump(wsk_dump_dir_t dir, func_gen_data_t func, void *paras)
     {
         int buf_r = s_wsk_log_stru.buf_r;
         s_wsk_log_stru.buf_tx_len = s_wsk_log_stru.buf_len[buf_r];
-        uart_tx(s_wsk_log_stru.dev, 0, s_wsk_log_stru.buf_p[buf_r], s_wsk_log_stru.buf_tx_len, SYS_FOREVER_MS);
+        uart_tx(s_wsk_log_stru.dev, s_wsk_log_stru.buf_p[buf_r], s_wsk_log_stru.buf_tx_len, SYS_FOREVER_MS);
     }
     return 0;
 }
@@ -142,7 +145,7 @@ void wsk_frame_tx_done(void)
     misc_evt_t send_evt;
     send_evt.handle = wsk_evt_deal;
     send_evt.arg = (unsigned int)(s_wsk_log_stru.buf_p[s_wsk_log_stru.buf_r]);
-    if (OS_EFULL == os_mq_send(misc_evt_mq_get(), &send_evt, sizeof(misc_evt_t), OS_NO_WAIT))
+    if (ENOMSG == k_msgq_put(misc_evt_mq_get(), &send_evt, K_NO_WAIT))
     {
         zassert_true(0);
     }
@@ -156,7 +159,7 @@ void wsk_frame_tx_done(void)
     s_wsk_log_stru.buf_tx_len = s_wsk_log_stru.buf_len[buf_r];
     if (!WSK_LOG_FIFO_EMPTY())
     {
-        os_device_write_nonblock(s_wsk_log_stru.dev, 0, s_wsk_log_stru.buf_p[buf_r], s_wsk_log_stru.buf_len[buf_r], SYS_FOREVER_MS);
+        uart_tx(s_wsk_log_stru.dev, s_wsk_log_stru.buf_p[buf_r], s_wsk_log_stru.buf_len[buf_r], SYS_FOREVER_MS);
     }
 }
 
@@ -170,14 +173,14 @@ int wsk_dump_sta_check(void)
     return 0;
 }
 
-static int wsk_evt_deal(os_uint32_t arg)
+static int wsk_evt_deal(uint32_t arg)
 {
     unsigned int *buf_r_p = (unsigned int *)arg;
     free(buf_r_p);
     return 0;
 }
 
-void wsk_dump_init(os_device_t *dev)
+void wsk_dump_init(struct device *dev)
 {
     s_wsk_log_stru.dev = dev;
 }

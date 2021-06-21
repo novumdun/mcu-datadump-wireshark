@@ -55,7 +55,7 @@ typedef struct wsk_ret
     unsigned int tol_len;
 } wsk_ret_t;
 
-void wsk_dump_init(os_device_t *dev);
+void wsk_dump_init(struct device *dev);
 
 int wsk_bt_hci_hexdump(void *paras_p, wsk_ret_t *rets);
 

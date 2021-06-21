@@ -25,18 +25,17 @@
 #ifndef __MISC_EVT_H__
 #define __MISC_EVT_H__
 
-#include <os_types.h>
-#include <os_mq.h>
+#include <kernel.h>
 
-typedef int (*misc_evt_handle_t)(os_uint32_t misc_evt);
+typedef int (*misc_evt_handle_t)(uint32_t misc_evt);
 
 typedef struct bt_hci_log
 {
     misc_evt_handle_t handle;
-    os_uint32_t arg;
+    uint32_t arg;
 } misc_evt_t;
 
-os_mq_t *misc_evt_mq_get(void);
+struct k_msgq *misc_evt_mq_get(void);
 
 int misc_evt_init(void);
 

@@ -22,50 +22,49 @@
  * 2021-06-07    OneOS Team      First Version
  ***********************************************************************************************************************
  */
-#include <zassert_true.h>
-#include <os_clock.h>
-#include <os_memory.h>
-#include <arch_interrupt.h>
-#include <os_mq.h>
-#include <os_mutex.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <kernel.h>
 #include "misc_evt.h"
 
 #define MQ_MAX_MSG 16
 #define MSG_SIZE sizeof(misc_evt_t)
-#define MQ_POLL_SIZE (MQ_MAX_MSG * (MSG_SIZE + sizeof(os_mq_msg_hdr_t)))
-static char s_mq_pool[MQ_POLL_SIZE];
-static os_mq_t s_mq;
+#define MQ_POLL_SIZE (MQ_MAX_MSG * MSG_SIZE)
+static char __aligned(4) s_mq_pool[MQ_POLL_SIZE];
+static struct k_msgq s_mq;
 
-os_mq_t *misc_evt_mq_get(void)
+#define MISC_EVT_STACK_SIZE 512
+K_THREAD_STACK_DEFINE(misc_evt_stack, MISC_EVT_STACK_SIZE);
+static struct k_thread s_thread;
+
+struct k_msgq *misc_evt_mq_get(void)
 {
     return &s_mq;
 }
 
-static void misc_evt_deal(void *parameter)
+static void misc_evt_deal(void *p0, void *p1, void *p2)
 {
-    os_size_t recv_size = 0;
     misc_evt_t recv_evt;
     while (1)
     {
-        os_mq_recv(&s_mq, &recv_evt, MSG_SIZE, OS_WAIT_FOREVER, &recv_size);
+        k_msgq_get(&s_mq, &recv_evt, K_FOREVER);
         recv_evt.handle(recv_evt.arg);
     }
 }
 
 int misc_evt_init(void)
 {
-    os_err_t ret;
-    os_task_t *task;
+    k_msgq_init(&s_mq, s_mq_pool, MSG_SIZE, MQ_MAX_MSG);
 
-    ret = os_mq_init(&s_mq, "msgqueue", s_mq_pool, MQ_POLL_SIZE, MSG_SIZE);
-    zassert_true(OS_EOK == ret);
-
-    task = os_task_create("misc_evt", misc_evt_deal, NULL, 512, 2);
-    zassert_true(task);
-    os_task_startup(task);
+    k_tid_t my_tid = k_thread_create(&s_thread, misc_evt_stack,
+                                     K_THREAD_STACK_SIZEOF(misc_evt_stack),
+                                     misc_evt_deal,
+                                     NULL,
+                                     NULL,
+                                     NULL,
+                                     4,
+                                     0,
+                                     K_NO_WAIT);
 
     return 0;
 }
-
