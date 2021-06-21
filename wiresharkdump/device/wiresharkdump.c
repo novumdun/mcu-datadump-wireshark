@@ -22,15 +22,7 @@
  * 2021-06-07    OneOS Team      First Version
  ***********************************************************************************************************************
  */
-#include <drv_cfg.h>
-#include <os_clock.h>
-#include <os_memory.h>
-#include <arch_interrupt.h>
-#include <os_mq.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <serial/serial.h>
+#include <drivers/uart.h>
 #include "misc_evt.h"
 #include "wiresharkdump.h"
 
@@ -63,8 +55,8 @@ int wsk_bt_hci_hexdump(void *paras_p, wsk_ret_t *rets)
     int len = paras->len;
 
     unsigned int tol_len = 5 + sizeof(os_tick_t) + (len + 1);
-    unsigned char *buf = os_malloc(tol_len);
-    OS_ASSERT(buf != OS_NULL);
+    unsigned char *buf = malloc(tol_len);
+    zassert_true(buf != OS_NULL);
 
     unsigned int pos = 4 + sizeof(os_tick_t);
     buf[pos] = type & 0x0F;
@@ -85,8 +77,8 @@ int wsk_eth_hexdump(void *paras_p, wsk_ret_t *rets)
     int len = paras->len;
 
     unsigned int tol_len = 5 + sizeof(os_tick_t) + len;
-    unsigned char *buf = os_malloc(tol_len);
-    OS_ASSERT(buf != OS_NULL);
+    unsigned char *buf = malloc(tol_len);
+    zassert_true(buf != OS_NULL);
 
     memcpy(&buf[4 + sizeof(os_tick_t)], pkt, len);
 
@@ -104,7 +96,7 @@ int wsk_hexdump(wsk_dump_dir_t dir, func_gen_data_t func, void *paras)
         return 0;
     }
 
-    os_tick_t time = (1000 / OS_TICK_PER_SECOND) * os_tick_get();
+    os_tick_t time = (1000 / sys_clock_hw_cycles_per_sec()) * k_cycle_get_32();
 
     wsk_ret_t rets;
     func(paras, &rets);
@@ -123,7 +115,7 @@ int wsk_hexdump(wsk_dump_dir_t dir, func_gen_data_t func, void *paras)
     buf[pos] = dir;
     buf[tol_len - 1] = 0x55;
 
-    os_base_t level = os_irq_lock();
+    unsigned int level = irq_lock();
     int empty = WSK_LOG_FIFO_EMPTY();
 
     int buf_w = s_wsk_log_stru.buf_w;
@@ -134,29 +126,15 @@ int wsk_hexdump(wsk_dump_dir_t dir, func_gen_data_t func, void *paras)
 
     s_wsk_log_stru.buf_p[buf_w] = buf;
     s_wsk_log_stru.buf_len[buf_w] = tol_len;
-    os_irq_unlock(level);
+    irq_unlock(level);
 
     if (empty)
     {
         int buf_r = s_wsk_log_stru.buf_r;
         s_wsk_log_stru.buf_tx_len = s_wsk_log_stru.buf_len[buf_r];
-        os_device_write_nonblock(s_wsk_log_stru.dev, 0, s_wsk_log_stru.buf_p[buf_r], s_wsk_log_stru.buf_tx_len);
+        uart_tx(s_wsk_log_stru.dev, 0, s_wsk_log_stru.buf_p[buf_r], s_wsk_log_stru.buf_tx_len, SYS_FOREVER_MS);
     }
     return 0;
-}
-
-int wsk_frame_tx_get_rest_len(unsigned int drv_fifo_len)
-{
-    return s_wsk_log_stru.buf_tx_len - drv_fifo_len;
-}
-
-void wsk_frame_tx_next_slice(unsigned int drv_fifo_len)
-{
-    s_wsk_log_stru.buf_tx_len -= drv_fifo_len;
-    int buf_tx_len = s_wsk_log_stru.buf_tx_len;
-    int buf_r = s_wsk_log_stru.buf_r;
-    int buf_pos = s_wsk_log_stru.buf_len[buf_r] - buf_tx_len;
-    os_device_write_nonblock(s_wsk_log_stru.dev, 0, &s_wsk_log_stru.buf_p[buf_r][buf_pos], buf_tx_len);
 }
 
 void wsk_frame_tx_done(void)
@@ -166,7 +144,7 @@ void wsk_frame_tx_done(void)
     send_evt.arg = (unsigned int)(s_wsk_log_stru.buf_p[s_wsk_log_stru.buf_r]);
     if (OS_EFULL == os_mq_send(misc_evt_mq_get(), &send_evt, sizeof(misc_evt_t), OS_NO_WAIT))
     {
-        OS_ASSERT(0);
+        zassert_true(0);
     }
 
     // os_base_t level = os_irq_lock();
@@ -178,7 +156,7 @@ void wsk_frame_tx_done(void)
     s_wsk_log_stru.buf_tx_len = s_wsk_log_stru.buf_len[buf_r];
     if (!WSK_LOG_FIFO_EMPTY())
     {
-        os_device_write_nonblock(s_wsk_log_stru.dev, 0, s_wsk_log_stru.buf_p[buf_r], s_wsk_log_stru.buf_len[buf_r]);
+        os_device_write_nonblock(s_wsk_log_stru.dev, 0, s_wsk_log_stru.buf_p[buf_r], s_wsk_log_stru.buf_len[buf_r], SYS_FOREVER_MS);
     }
 }
 
@@ -195,7 +173,7 @@ int wsk_dump_sta_check(void)
 static int wsk_evt_deal(os_uint32_t arg)
 {
     unsigned int *buf_r_p = (unsigned int *)arg;
-    os_free(buf_r_p);
+    free(buf_r_p);
     return 0;
 }
 

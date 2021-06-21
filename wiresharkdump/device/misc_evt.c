@@ -22,7 +22,7 @@
  * 2021-06-07    OneOS Team      First Version
  ***********************************************************************************************************************
  */
-#include <os_assert.h>
+#include <zassert_true.h>
 #include <os_clock.h>
 #include <os_memory.h>
 #include <arch_interrupt.h>
@@ -60,10 +60,10 @@ int misc_evt_init(void)
     os_task_t *task;
 
     ret = os_mq_init(&s_mq, "msgqueue", s_mq_pool, MQ_POLL_SIZE, MSG_SIZE);
-    OS_ASSERT(OS_EOK == ret);
+    zassert_true(OS_EOK == ret);
 
     task = os_task_create("misc_evt", misc_evt_deal, NULL, 512, 2);
-    OS_ASSERT(task);
+    zassert_true(task);
     os_task_startup(task);
 
     return 0;
