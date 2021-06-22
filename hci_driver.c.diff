@@ -1,0 +1,98 @@
+diff --git a/subsys/bluetooth/controller/hci/hci_driver.c b/subsys/bluetooth/controller/hci/hci_driver.c
+index 917f8c0315..cf961ae826 100644
+--- a/subsys/bluetooth/controller/hci/hci_driver.c
++++ b/subsys/bluetooth/controller/hci/hci_driver.c
+@@ -91,12 +91,6 @@ static struct net_buf *process_prio_evt(struct node_rx_pdu *node_rx,
+ 	return NULL;
+ }
+ 
+-#include "/home/dengbo/workspaces/zephyr-samples/bluetooth/beacon_wiresharkdump/wiresharkdump/device/wiresharkdump.h"
+-#define BLE_HCI_UART_H4_CMD 0x01
+-#define BLE_HCI_UART_H4_ACL 0x02
+-#define BLE_HCI_UART_H4_SCO 0x03
+-#define BLE_HCI_UART_H4_EVT 0x04
+-
+ /**
+  * @brief Handover from Controller thread to Host thread
+  * @details Execution context: Controller thread
+@@ -145,17 +139,6 @@ static void prio_recv_thread(void *p1, void *p2, void *p3)
+ 					ll_rx_mem_release((void **)&node_rx);
+ 				}
+ 
+-				struct bt_hci_evt_hdr *hci_evt;
+-				uint8_t pktlen;
+-				wsk_bt_hci_paras_t paras;
+-
+-				hci_evt = (struct bt_hci_evt_hdr *)(buf->data);
+-				pktlen = sizeof(struct bt_hci_evt_hdr) + hci_evt->len;
+-				paras.type = BLE_HCI_UART_H4_EVT;
+-				paras.pkt = hci_evt;
+-				paras.len = pktlen;
+-				wsk_hexdump(wsk_dump_dir_o, wsk_bt_hci_hexdump, &paras);
+-
+ 				bt_recv_prio(buf);
+ 				/* bt_recv_prio would not release normal evt
+ 				 * buf.
+@@ -415,18 +398,6 @@ static void recv_thread(void *p1, void *p2, void *p3)
+ 			if (buf->len) {
+ 				BT_DBG("Packet in: type:%u len:%u",
+ 					bt_buf_get_type(buf), buf->len);
+-
+-				struct bt_hci_evt_hdr *hci_evt;
+-				uint8_t pktlen;
+-				wsk_bt_hci_paras_t paras;
+-
+-				hci_evt = (struct bt_hci_evt_hdr *)(buf->data);
+-				pktlen = sizeof(struct bt_hci_evt_hdr) + hci_evt->len;
+-				paras.type = BLE_HCI_UART_H4_EVT;
+-				paras.pkt = hci_evt;
+-				paras.len = pktlen;
+-				wsk_hexdump(wsk_dump_dir_o, wsk_bt_hci_hexdump, &paras);
+-
+ 				bt_recv(buf);
+ 			} else {
+ 				net_buf_unref(buf);
+@@ -444,17 +415,6 @@ static int cmd_handle(struct net_buf *buf)
+ 
+ 	evt = hci_cmd_handle(buf, (void **) &node_rx);
+ 	if (evt) {
+-		struct bt_hci_evt_hdr *hci_evt;
+-		uint8_t pktlen;
+-		wsk_bt_hci_paras_t paras;
+-
+-		hci_evt = (struct bt_hci_evt_hdr *)(evt->data);
+-		pktlen = sizeof(struct bt_hci_evt_hdr) + hci_evt->len;
+-		paras.type = BLE_HCI_UART_H4_EVT;
+-		paras.pkt = hci_evt;
+-		paras.len = pktlen;
+-		wsk_hexdump(wsk_dump_dir_o, wsk_bt_hci_hexdump, &paras);
+-		
+ 		BT_DBG("Replying with event of %u bytes", evt->len);
+ 		bt_recv_prio(evt);
+ 
+@@ -489,10 +449,6 @@ static int hci_driver_send(struct net_buf *buf)
+ 	uint8_t type;
+ 	int err;
+ 
+-	struct bt_hci_cmd_hdr *hci_cmd;
+-	uint8_t pktlen ;
+-	wsk_bt_hci_paras_t paras;
+-
+ 	BT_DBG("enter");
+ 
+ 	if (!buf->len) {
+@@ -508,14 +464,6 @@ static int hci_driver_send(struct net_buf *buf)
+ 		break;
+ #endif /* CONFIG_BT_CONN */
+ 	case BT_BUF_CMD:
+-
+-		hci_cmd = (struct bt_hci_cmd_hdr *)(buf->data);
+-		pktlen = sizeof(struct bt_hci_cmd_hdr) + hci_cmd->param_len;
+-		paras.type = BLE_HCI_UART_H4_CMD;
+-		paras.pkt = hci_cmd;
+-		paras.len = pktlen;
+-		wsk_hexdump(wsk_dump_dir_o, wsk_bt_hci_hexdump, &paras);
+-
+ 		err = cmd_handle(buf);
+ 		break;
+ 	default:

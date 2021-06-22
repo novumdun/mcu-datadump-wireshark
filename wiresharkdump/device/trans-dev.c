@@ -20,7 +20,7 @@ void test_single_read_callback(const struct device *dev,
 struct device *wsk_trans_dev_init(char *dev_name)
 {
 	const struct uart_config uart_cfg = {
-		.baudrate = 115200,
+		.baudrate = 921600,
 		.parity = UART_CFG_PARITY_NONE,
 		.stop_bits = UART_CFG_STOP_BITS_1,
 		.data_bits = UART_CFG_DATA_BITS_8,

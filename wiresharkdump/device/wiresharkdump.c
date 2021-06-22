@@ -57,14 +57,14 @@ int wsk_bt_hci_hexdump(void *paras_p, wsk_ret_t *rets)
     char *pkt = paras->pkt;
     int len = paras->len;
 
-    unsigned int tol_len = 5 + sizeof(k_ticks_t) + (len + 1);
+    unsigned int tol_len = 5 + sizeof(uint32_t) + (len + 1);
     unsigned char *buf = malloc(tol_len);
-    zassert_true(buf != NULL);
+    // zassert_true(buf != NULL);
 
-    unsigned int pos = 4 + sizeof(k_ticks_t);
+    unsigned int pos = 4 + sizeof(uint32_t);
     buf[pos] = type & 0x0F;
 
-    memcpy(&buf[5 + sizeof(k_ticks_t)], pkt, len);
+    memcpy(&buf[5 + sizeof(uint32_t)], pkt, len);
 
     rets->buf = buf;
     rets->tol_len = tol_len;
@@ -79,11 +79,11 @@ int wsk_eth_hexdump(void *paras_p, wsk_ret_t *rets)
     char *pkt = paras->pkt;
     int len = paras->len;
 
-    unsigned int tol_len = 5 + sizeof(k_ticks_t) + len;
+    unsigned int tol_len = 5 + sizeof(uint32_t) + len;
     unsigned char *buf = malloc(tol_len);
-    zassert_true(buf != NULL);
+    // zassert_true(buf != NULL);
 
-    memcpy(&buf[4 + sizeof(k_ticks_t)], pkt, len);
+    memcpy(&buf[4 + sizeof(uint32_t)], pkt, len);
 
     rets->buf = buf;
     rets->tol_len = tol_len;
@@ -99,7 +99,7 @@ int wsk_hexdump(wsk_dump_dir_t dir, func_gen_data_t func, void *paras)
         return 0;
     }
 
-    k_ticks_t time = (1000 / sys_clock_hw_cycles_per_sec()) * sys_clock_tick_get();
+    uint32_t time = k_uptime_get_32();
 
     wsk_ret_t rets;
     func(paras, &rets);
@@ -147,7 +147,7 @@ void wsk_frame_tx_done(void)
     send_evt.arg = (unsigned int)(s_wsk_log_stru.buf_p[s_wsk_log_stru.buf_r]);
     if (ENOMSG == k_msgq_put(misc_evt_mq_get(), &send_evt, K_NO_WAIT))
     {
-        zassert_true(0);
+        // zassert_true(0);
     }
 
     // os_base_t level = os_irq_lock();
